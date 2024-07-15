@@ -1,0 +1,71 @@
+### 필요한 패키지 항목
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+import warnings
+warnings.simplefilter(action="ignore")
+import time
+import pandas as pd
+
+
+### 드라이브 스루 매장만 선택
+driver = webdriver.Chrome()
+
+url = "https://www.starbucks.co.kr/store/store_map.do"
+driver.get(url)
+time.sleep(2)
+
+#옵션버튼 누르기
+driver.find_element(By.CSS_SELECTOR, "#container > div > form > fieldset > div > section > article.find_store_cont > header > p > a").click()
+
+time.sleep(2)
+#드라이브스루 누르기
+driver.find_element(By.CSS_SELECTOR, "dl.opt_select_dl1>dd.right>.icon02").click()
+
+driver.find_element(By.CSS_SELECTOR, "#storeMap > form > fieldset > div > ul > li.li2 > a").click()
+#적용버튼 누르기
+
+
+### 주소 정보 추출
+time.sleep(2)
+address = driver.find_element(By.CSS_SELECTOR, "#container > div > form > fieldset > div > section > article.find_store_cont > article > article:nth-child(2) > div.result_num_wrap.myStoreInfo > span").text
+address=int(address)
+address
+
+### 자동으로 스크롤을 하며 전국 매장 주소 정보 추출
+#화면에 나오지 않는 지점의 정보를 저장할 수 없어서 특정 태그까지 스크롤하는 코드를 사용
+# 특정 태그 지점까지 스크롤 하는 코드
+sbks=[]
+
+from selenium.webdriver import ActionChains
+for i in range(1,address+1):
+    some_tag = driver.find_element(By.CSS_SELECTOR, "#mCSB_1_container > ul > li:nth-child({}) > p".format(i))
+    action = ActionChains(driver)
+    action.move_to_element(some_tag).perform()
+    time.sleep(1)
+    title = driver.find_element(By.CSS_SELECTOR, "#mCSB_1_container > ul > li:nth-child({}) > strong".format(i)).text
+    address = driver.find_element(By.CSS_SELECTOR, "#mCSB_1_container > ul > li:nth-child({}) > p".format(i)).text
+
+    data = driver.find_elements(By.CSS_SELECTOR, "#mCSB_1_container > ul > li:nth-child({})".format(i))
+    lng = [lng.get_attribute("data-long") for lng in data]
+    lat = [lat.get_attribute("data-lat") for lat in data]
+
+    sbks.append({
+                "name":title,
+                "address":address,
+                "lat":lat,
+                "lng":lng
+            })
+# 스크롤해가면서 요소 저장
+
+### 위도와 경도 데이터 얻기
+
+df_sbk = pd.DataFrame(sbks)
+
+def remove_after_newline(text):
+    return text.split('\n')[0]
+
+df_sbk['address'] = df_sbk['address'].apply(remove_after_newline)
+
+df_sbk['lat'] = df_sbk['lat'].apply(lambda x: str(x[0])).str[:11]
+df_sbk['lng'] = df_sbk['lng'].apply(lambda x: str(x[0])).str[:11]
+df_sbk
