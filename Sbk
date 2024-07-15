@@ -65,7 +65,6 @@ def remove_after_newline(text):
     return text.split('\n')[0]
 
 df_sbk['address'] = df_sbk['address'].apply(remove_after_newline)
-
 df_sbk['lat'] = df_sbk['lat'].apply(lambda x: str(x[0])).str[:11]
 df_sbk['lng'] = df_sbk['lng'].apply(lambda x: str(x[0])).str[:11]
 df_sbk
